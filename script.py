@@ -63,5 +63,6 @@ def mergeDO(ano,mes,dia,caderno):
         merger.write(fout)
 
 
+#REFATORAR CODIGO P/ USAR CLASSES
 #RODAR gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dBATCH  -dQUIET -sOutputFile=output.pdf input.pdf
 #COMPRIMIR E ENVIAR PDF POR EMAIL
