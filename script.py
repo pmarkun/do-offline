@@ -1,20 +1,11 @@
-from urllib.request import urlopen
 from PyPDF2 import PdfFileMerger
+import requests
 import shutil
 import os
 import subprocess
 import datetime
 
-BASE_URL = "http://diariooficial.imprensaoficial.com.br/doflash/prototipo/"
-DIRECTORY = "{}/{}/{}/{}/pdf/"
-PG = "pg_{}.pdf"
-
-ano = 2019
-mes = 'Fevereiro'
-dia = datetime.datetime.now().day
-caderno = 'legislativo'
-
-
+MESES = ['Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 class DO:
     def __init__(self, ano, mes, dia, caderno):
         self.ano = ano
@@ -36,21 +27,21 @@ class DO:
 
         url = self.base_url + self.path + self.filename()
         print(url)
-        resp = urlopen(url)
+        resp = requests.get(url)
 
-        if resp.code == 200:
+        if resp.status_code == 200:
             with open(self.path + self.filename(), 'wb') as out_file:
-                shutil.copyfileobj(resp, out_file)
-            return 1
-        else:
-            return None
+                for chunk in resp.iter_content(1024):
+                    out_file.write(chunk)
+            return True
+        elif resp.status_code == 404:
+            return False
 
     def getDO(self):
         download = 1
         while download == 1:
             if not os.path.isfile(self.path + self.filename()):
-                do = self.getPagina()
-                if do:
+                if self.getPagina():
                     self.pg += 1
                 else:
                     download = 0
@@ -78,3 +69,20 @@ class DO:
 #REFATORAR CODIGO P/ USAR CLASSES
 #RODAR gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dNOPAUSE -dBATCH  -dQUIET -sOutputFile=output.pdf input.pdf
 #COMPRIMIR E ENVIAR PDF POR EMAIL
+
+if __name__ == "__main__":
+
+    d = datetime.datetime.now()
+    ano = d.year
+    mes = MESES[d.month-1]
+    dia = d.day-9
+    caderno = 'legislativo'
+
+    x = DO(ano,mes,dia,caderno)
+    if not os.path.isfile(x.do_filepath):
+        print("Getting "+x.do_filepath)
+        x.getDO()
+        x.mergeDO()
+        x.compactDO()
+    else:
+        print(x.do_filepath+" already exists")
