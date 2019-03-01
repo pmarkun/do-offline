@@ -1,0 +1,7 @@
+
+SETTINGS = {
+ "slack" : {
+    "token" : "PUT YOUR TOKEN",
+    "channels" : ["PUT YOUR CHANNEL"]
+    }
+  }
