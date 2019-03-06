@@ -1,4 +1,4 @@
-from PyPDF2 import PdfFileMerger
+from PyPDF2 import PdfFileMerger, PdfFileReader
 import requests
 import urllib.parse
 import shutil
@@ -6,6 +6,7 @@ import os
 import subprocess
 import datetime
 import unidecode
+import fitz
 
 from settings import *
 
@@ -20,7 +21,7 @@ class DO:
         self.base_url = "http://diariooficial.imprensaoficial.com.br/doflash/prototipo/"
         self.local_path = "data/raw/"
         self.path = "{}/{}/{}/{}/pdf/".format(self.ano,self.mes,self.dia,self.caderno)
-        self.do_filepath = "data/DO_{}_{}_{}_{}.pdf".format(self.caderno,self.ano,unidecode.unidecode(self.mes),self.dia)
+        self.do_filepath = "DO_{}_{}_{}_{}.pdf".format(self.caderno,self.ano,unidecode.unidecode(self.mes),self.dia)
         self.slack = slackconfig
 
     def filename(self):
@@ -44,16 +45,18 @@ class DO:
             return False
 
     def getDO(self):
-        download = 1
-        while download == 1:
+        download = True
+        while download:
             if not os.path.isfile(self.local_path + self.path + self.filename()):
                 if self.getPagina():
                     self.pg += 1
                 else:
-                    download = 0
+                    if self.pg == 1:
+                        return None
+                    download = False
             else:
                 self.pg += 1
-        self.mergeDO()
+
 
     def mergeDO(self):
         x = [a for a in os.listdir(self.local_path + self.path) if a.endswith(".pdf")]
@@ -63,22 +66,33 @@ class DO:
         merger = PdfFileMerger()
 
         for pdf in x:
-            merger.append(open(self.local_path + self.path+pdf, 'rb'))
 
-        with open(self.do_filepath, "wb") as fout:
+            merger.append(PdfFileReader(self.local_path + self.path + pdf, 'rb'))
+
+        with open("data/tmp/"+self.do_filepath, "wb") as fout:
             merger.write(fout)
-        self.compactDO()
+
+    def highlightDO(self, words):
+        doc = fitz.open("data/tmp/"+self.do_filepath)
+        print(doc)
+        for page in doc:
+            for word in words:
+                matches = page.searchFor(word)
+                print(matches)
+                for match in matches:
+                    highlight = page.addHighlightAnnot(match)
+        doc.save("data/tmp/h_"+self.do_filepath)
+
 
     def compactDO(self):
-        outfile = '-sOutputFile=s_'+self.do_filepath
-        gscmd = ['gs', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4', '-dPDFSETTINGS=/screen', '-dNOPAUSE', '-dQUIET', '-dBATCH', outfile, self.do_filepath]
+        outfile = '-sOutputFile=data/'+self.do_filepath
+        gscmd = ['gs', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4', '-dPDFSETTINGS=/screen', '-dNOPAUSE', '-dQUIET', '-dBATCH', outfile, "data/tmp/h_"+self.do_filepath]
         gsproc = subprocess.call(gscmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        self.do_filepath = 's_'+self.do_filepath
 
     def uploadDO(self):
         with open(self.do_filepath, 'rb') as arquivo:
             payload={
-              "filename":self.do_filepath,
+              "filename":"data/"+self.do_filepath,
               "filetype":'pdf',
               "token": self.slack['token'],
               "channels": self.slack['channels'],
@@ -90,15 +104,19 @@ if __name__ == "__main__":
 
     d = datetime.datetime.now()
     ano = d.year
-    mes = MESES[d.month-1]
+    mes = MESES[d.month-2]
     dia = d.day
     caderno = 'legislativo'
 
     x = DO(ano,mes,dia,caderno, SETTINGS['slack'])
 
-    if not os.path.isfile(x.do_filepath):
+    if not os.path.isfile("data/tmp/"+x.do_filepath):
         print("Getting "+x.do_filepath)
         x.getDO()
-        x.uploadDO()
+        if x.pg > 1:
+            x.mergeDO()
+            x.highlightDO(SETTINGS['highlights'])
+            x.compactDO()
+            #x.uploadDO()
     else:
         print(x.do_filepath+" already exists")
