@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     d = datetime.datetime.now()
     ano = d.year
-    mes = MESES[d.month]
+    mes = MESES[d.month-1]
     dia = d.day
     caderno = 'legislativo'
 
