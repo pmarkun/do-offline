@@ -7,6 +7,7 @@ import subprocess
 import datetime
 import unidecode
 import fitz
+import argparse
 
 from settings import *
 
@@ -66,10 +67,11 @@ class DO:
         merger = PdfFileMerger()
 
         for pdf in x:
-
-            merger.append(PdfFileReader(self.local_path + self.path + pdf, 'rb'))
+            pg = PdfFileReader(self.local_path + self.path + pdf)
+            merger.append(pg)
 
         with open("data/tmp/"+self.do_filepath, "wb") as fout:
+            print(fout)
             merger.write(fout)
 
     def highlightDO(self, words):
@@ -85,14 +87,18 @@ class DO:
 
 
     def compactDO(self):
-        outfile = '-sOutputFile=data/'+self.do_filepath
-        gscmd = ['gs', '-sDEVICE=pdfwrite', '-dCompatibilityLevel=1.4', '-dPDFSETTINGS=/screen', '-dNOPAUSE', '-dQUIET', '-dBATCH', outfile, "data/tmp/h_"+self.do_filepath]
+        self.compact_and_fix("data/tmp/h_"+self.do_filepath,"data/"+self.do_filepath)
+
+    def compact_and_fix(self, infilepath, outfilepath):
+        gscmd = ['gs', '-sDEVICE=pdfwrite',
+         '-dCompatibilityLevel=1.4', '-dPDFSETTINGS=/screen', '-dNOPAUSE', '-dQUIET', '-dBATCH',
+         '-sOutputFile='+outfilepath, infilepath]
         gsproc = subprocess.call(gscmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     def uploadDO(self):
-        with open(self.do_filepath, 'rb') as arquivo:
+        with open("data/"+self.do_filepath, 'rb') as arquivo:
             payload={
-              "filename":"data/"+self.do_filepath,
+              "filename":self.do_filepath,
               "filetype":'pdf',
               "token": self.slack['token'],
               "channels": self.slack['channels'],
@@ -102,21 +108,29 @@ class DO:
 
 if __name__ == "__main__":
 
-    d = datetime.datetime.now()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--date", help="today or format DD/MM/YY")
+    parser.add_argument("-c", "--caderno", help="legislativo, executivo, etc")
+    args = parser.parse_args()
+
+    if args.date == "today":
+        d = datetime.datetime.now()
+    else:
+        d = datetime.datetime.strptime(args.date, "%d/%m/%y")
+
     ano = d.year
     mes = MESES[d.month-1]
     dia = d.day
     caderno = 'legislativo'
 
     x = DO(ano,mes,dia,caderno, SETTINGS['slack'])
-
-    if not os.path.isfile("data/tmp/"+x.do_filepath):
+    if not os.path.isfile("data/"+x.do_filepath):
         print("Getting "+x.do_filepath)
         x.getDO()
         if x.pg > 1:
             x.mergeDO()
             x.highlightDO(SETTINGS['highlights'])
             x.compactDO()
-            x.uploadDO()
+            #x.uploadDO()
     else:
         print(x.do_filepath+" already exists")
