@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     d = datetime.datetime.now()
     ano = d.year
-    mes = MESES[d.month-2]
+    mes = MESES[d.month]
     dia = d.day
     caderno = 'legislativo'
 
@@ -117,6 +117,6 @@ if __name__ == "__main__":
             x.mergeDO()
             x.highlightDO(SETTINGS['highlights'])
             x.compactDO()
-            #x.uploadDO()
+            x.uploadDO()
     else:
         print(x.do_filepath+" already exists")
