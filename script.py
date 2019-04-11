@@ -119,7 +119,7 @@ if __name__ == "__main__":
         d = datetime.datetime.strptime(args.date, "%d/%m/%y")
 
     ano = d.year
-    mes = MESES[d.month-1]
+    mes = MESES[d.month - 1]
     dia = d.day
     caderno = args.caderno
 
