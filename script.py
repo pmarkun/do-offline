@@ -111,6 +111,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--date", help="today or format DD/MM/YY")
     parser.add_argument("-c", "--caderno", help="legislativo, exec1, etc")
+    parser.add_argument("-u", "--upload", help="Upload to slack? True")
     args = parser.parse_args()
 
     if args.date == "today":
@@ -131,6 +132,7 @@ if __name__ == "__main__":
             x.mergeDO()
             x.highlightDO(SETTINGS['highlights'])
             x.compactDO()
-            x.uploadDO()
+            if args.upload == "True":
+                x.uploadDO()
     else:
         print(x.do_filepath+" already exists")
