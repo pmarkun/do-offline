@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-d", "--date", help="today or format DD/MM/YY")
-    parser.add_argument("-c", "--caderno", help="legislativo, executivo, etc")
+    parser.add_argument("-c", "--caderno", help="legislativo, exec1, etc")
     args = parser.parse_args()
 
     if args.date == "today":
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     ano = d.year
     mes = MESES[d.month-1]
     dia = d.day
-    caderno = 'legislativo'
+    caderno = args.caderno
 
     x = DO(ano,mes,dia,caderno, SETTINGS['slack'])
     if not os.path.isfile("data/"+x.do_filepath):
@@ -131,6 +131,6 @@ if __name__ == "__main__":
             x.mergeDO()
             x.highlightDO(SETTINGS['highlights'])
             x.compactDO()
-            #x.uploadDO()
+            x.uploadDO()
     else:
         print(x.do_filepath+" already exists")
